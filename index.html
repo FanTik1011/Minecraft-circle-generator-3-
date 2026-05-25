@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft Circle Generator - Real Blocks</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+<aside>
+
+  <div class="stats-block">
+    <div class="stat-item">
+      <span class="stat-label">Blocks</span>
+      <span class="stat-val" id="hb">—</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Diameter</span>
+      <span class="stat-val" id="hd">—</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Area</span>
+      <span class="stat-val" id="ha">—</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">Perimeter</span>
+      <span class="stat-val" id="hp">—</span>
+    </div>
+  </div>
+
+  
+  <div class="theme-toggle" id="themeToggle" title="Toggle white background">
+    <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    <span class="toggle-label">White background</span>
+  </div>
+
+
+  <div class="ss">
+    <div class="st-row"><span class="st-icon">⬟</span><div class="st">Shape</div></div>
+    <div class="seg" id="shape-seg">
+      <button class="active" data-shape="circle">Circle</button>
+      <button data-shape="ellipse">Ellipse</button>
+      <button data-shape="filled">Filled</button>
+    </div>
+    <div class="ctrl">
+      <div class="ch"><span class="cl">Radius X</span><span class="cn" id="rv">15</span></div>
+      <input type="range" id="radius" min="2" max="100" value="15">
+    </div>
+    <div class="ctrl" id="ry-ctrl" style="display:none">
+      <div class="ch"><span class="cl">Radius Y</span><span class="cn" id="hrv">10</span></div>
+      <input type="range" id="hradius" min="2" max="100" value="10">
+    </div>
+  </div>
+
+  
+  <div class="ss">
+    <div class="st-row"><span class="st-icon">👁</span><div class="st">View</div></div>
+    <div class="chklist">
+      <label class="chk"><input type="checkbox" id="showGrid" checked><span>Grid lines</span></label>
+      <label class="chk"><input type="checkbox" id="showCenter" checked><span>Mark center</span></label>
+      <label class="chk"><input type="checkbox" id="quarterMode"><span>Quarter view (¼)</span></label>
+      <label class="chk"><input type="checkbox" id="showCoords"><span>Coordinates</span></label>
+    </div>
+  </div>
+
+ 
+  <div class="ss">
+    <div class="st-row"><span class="st-icon">🖌</span><div class="st">Paint tool</div></div>
+    <div class="tools">
+      <button class="tb active" data-tool="paint"><span class="ic">🖌️</span>Paint</button>
+      <button class="tb" data-tool="erase"><span class="ic">🧹</span>Erase</button>
+      <button class="tb" data-tool="pan"><span class="ic">✋</span>Pan</button>
+    </div>
+    <div class="ar">
+      <button class="ab" id="undoBtn" disabled>↩ Undo</button>
+      <button class="ab" id="redoBtn" disabled>↪ Redo</button>
+      <button class="ab danger" id="clearBtn">✕ Clear</button>
+    </div>
+  </div>
+
+
+  <div class="ss">
+    <div class="st-row"><span class="st-icon">🔁</span><div class="st">Symmetry</div></div>
+    <div class="chklist">
+      <label class="chk"><input type="checkbox" id="symX"><span>Mirror X (left ↔ right)</span></label>
+      <label class="chk"><input type="checkbox" id="symY"><span>Mirror Y (top ↕ bottom)</span></label>
+      <label class="chk"><input type="checkbox" id="sym4" checked><span>4-way (X + Y)</span></label>
+    </div>
+  </div>
+
+
+  <div class="ss circle-block-section">
+    <div class="st-row"><span class="st-icon">🧱</span><div class="st">Circle block</div></div>
+    <div class="material-row">
+      <span class="cl">Generated circle uses</span>
+      <button class="material-btn" id="baseBlockPicker" type="button">
+        <span id="baseBlockName">Stone</span>
+      </button>
+    </div>
+    <div class="block-popup" id="baseBlockPopup" aria-hidden="true">
+      <div class="popup-head">
+        <div>
+          <div class="popup-title">Circle material</div>
+          <div class="popup-subtitle">Pick the block used by generated shapes</div>
+        </div>
+        <button class="popup-close" id="baseBlockClose" type="button" title="Close">x</button>
+      </div>
+      <div class="pal popup-pal" id="basePal"></div>
+    </div>
+  </div>
+
+  <div class="ss">
+    <div class="st-row"><span class="st-icon">🎨</span><div class="st">Paint block</div></div>
+    <div class="ctrl">
+      <div class="ch"><span class="cl">Manual paint uses</span><span class="cn" id="paintBlockName">Stone</span></div>
+    </div>
+    <div class="pal" id="paintPal"></div>
+  </div>
+
+
+  <div class="ss" style="border-bottom:none">
+    <div class="st-row"><span class="st-icon">🔍</span><div class="st">Zoom</div></div>
+    <div class="ctrl">
+      <div class="ch"><span class="cl">Level</span><span class="cn" id="zl">100%</span></div>
+      <input type="range" id="zslider" min="10" max="600" value="100">
+    </div>
+  </div>
+</aside>
+<button class="side-toggle" id="sideToggle" title="Close panel">v</button>
+
+<div class="cw" id="cw">
+  <canvas id="mc"></canvas>
+  <div class="cb" id="cb">0, 0</div>
+  <div class="dl-bar">
+    <span class="dl-bar-label">Export</span>
+    <div class="dl-sep"></div>
+    <button class="dl-btn-base dl-btn" id="dlBtn" title="Download as PNG image">
+      <span class="dl-btn-icon">🖼</span> PNG Image
+    </button>
+    <button class="dl-btn-base dl-schem-btn" id="dlSchemBtn" title="Download .schem for Litematica / WorldEdit">
+      <span class="dl-btn-icon">📦</span> .schem
+    </button>
+  </div>
+  <div class="zc">
+    <button class="zb" id="zin" title="Zoom in">+</button>
+    <div class="zp" id="zp">100%</div>
+    <button class="zb" id="zout" title="Zoom out">−</button>
+    <button class="zb" id="zreset" style="font-size:11px" title="Reset view">⊙</button>
+  </div>
+</div>
+</div>
+
+<script src="js/blocks.js"></script>
+<script src="js/palette.js"></script>
+<script src="js/state-and-controls.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/canvas-render.js"></script>
+<script src="js/canvas-events.js"></script>
+<script src="js/export-png.js"></script>
+<script src="js/export-schematic.js"></script>
+<script src="js/init.js"></script>
+</body>
+</html>

@@ -97,6 +97,17 @@ const BLOCKS = [
   { name:'Black Wool', file:'black_wool.png', pal:['#151519'] }
 ];
 
+const BLOCK_CATEGORIES = [
+  {name:'Stone', start:0, end:9},
+  {name:'Nature', start:10, end:19},
+  {name:'Planks', start:20, end:29},
+  {name:'Logs', start:30, end:39},
+  {name:'Building & Nether', start:40, end:59},
+  {name:'Ores', start:60, end:69},
+  {name:'Mineral Blocks', start:70, end:79},
+  {name:'Wool', start:80, end:94}
+];
+
 function makeFallbackCanvas(color) {
   const oc = document.createElement('canvas');
   oc.width = 16; oc.height = 16;

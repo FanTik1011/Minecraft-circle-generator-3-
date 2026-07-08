@@ -7,6 +7,20 @@ function w2s(wx, wy) { const c=cs(); return [panX+wx*c, panY+wy*c]; }
 function s2w(sx, sy) { const c=cs(); return [Math.floor((sx-panX)/c), Math.floor((sy-panY)/c)]; }
 
 
+const pop2dAnims = new Map();
+let pop2dRAF = null;
+const POP_DURATION_2D = 200;
+function ensure2dAnimLoop() {
+  if(pop2dRAF) return;
+  const step = () => {
+    draw();
+    const now = performance.now();
+    pop2dAnims.forEach((t,k) => { if(now-t >= POP_DURATION_2D) pop2dAnims.delete(k); });
+    pop2dRAF = pop2dAnims.size > 0 ? requestAnimationFrame(step) : null;
+  };
+  pop2dRAF = requestAnimationFrame(step);
+}
+
 const patternCache = new Map();
 function getPattern(idx, cellSize) {
   const key = idx + '_' + cellSize;
@@ -44,12 +58,15 @@ function draw() {
       ctx.beginPath(); ctx.arc(x,y,.8,0,Math.PI*2); ctx.fill();
     }
 
-  const genBlocks = genCircle(rx, ry, filled);
+  const genBlocks = viewMode === '3d'
+    ? genLayerCrossSection(shape3d, rx, cylHeight, currentLayer)
+    : genCircle(rx, ry, filled);
   const genSet = new Set(genBlocks.map(([x,y]) => x+','+y));
 
+  const {blocks: activeBlocks, erased: activeErased} = activeMaps();
   const allKeys = new Set();
-  genBlocks.forEach(([x,y]) => { const k=x+','+y; if(!customErased.has(k)) allKeys.add(k); });
-  customBlocks.forEach((_,k) => allKeys.add(k));
+  genBlocks.forEach(([x,y]) => { const k=x+','+y; if(!activeErased.has(k)) allKeys.add(k); });
+  activeBlocks.forEach((_,k) => allKeys.add(k));
 
 
   if(showGrid && c >= 3) {
@@ -81,10 +98,15 @@ function draw() {
     if(quarter && (bx<0 || by<0)) return;
     const [sx,sy] = w2s(bx,by);
     if(sx+c<0||sx>W||sy+c<0||sy>H) return;
-    const ci = customBlocks.has(k) ? customBlocks.get(k) : circleBlock;
+    const ci = activeBlocks.has(k) ? activeBlocks.get(k) : circleBlock;
 
     ctx.save();
     ctx.translate(sx, sy);
+    if(pop2dAnims.has(k)) {
+      const t = (performance.now()-pop2dAnims.get(k))/POP_DURATION_2D;
+      const s = easeOutBack(t);
+      ctx.translate(c/2, c/2); ctx.scale(s, s); ctx.translate(-c/2, -c/2);
+    }
 
     if(c >= 6) {
 
@@ -190,10 +212,26 @@ function draw() {
   const vis = quarter
     ? [...allKeys].filter(k => { const [x,y]=k.split(',').map(Number); return x>=0&&y>=0; }).length
     : allKeys.size;
-  document.getElementById('hb').textContent = vis.toLocaleString();
-  document.getElementById('hd').textContent = (rx*2+1)+(shape==='ellipse'?'×'+(ry*2+1):'');
-  document.getElementById('ha').textContent = Math.round(Math.PI*rx*ry).toLocaleString();
-  document.getElementById('hp').textContent = Math.round(2*Math.PI*Math.sqrt((rx*rx+ry*ry)/2)).toLocaleString();
+
+  if(viewMode === '3d') {
+    document.getElementById('hb').textContent = volumeBlockCount.toLocaleString();
+    document.getElementById('hd').textContent = (rx*2+1)+(shape3d==='cylinder'?' × h'+cylHeight:'');
+    document.getElementById('ha').textContent = Math.round(
+      shape3d==='cylinder' ? Math.PI*rx*rx*cylHeight :
+      shape3d==='dome' ? (2/3)*Math.PI*rx*rx*rx :
+      (4/3)*Math.PI*rx*rx*rx
+    ).toLocaleString();
+    document.getElementById('hp').textContent = Math.round(
+      shape3d==='cylinder' ? 2*Math.PI*rx*(rx+cylHeight) :
+      shape3d==='dome' ? 3*Math.PI*rx*rx :
+      4*Math.PI*rx*rx
+    ).toLocaleString();
+  } else {
+    document.getElementById('hb').textContent = vis.toLocaleString();
+    document.getElementById('hd').textContent = (rx*2+1)+(shape==='ellipse'?'×'+(ry*2+1):'');
+    document.getElementById('ha').textContent = Math.round(Math.PI*rx*ry).toLocaleString();
+    document.getElementById('hp').textContent = Math.round(2*Math.PI*Math.sqrt((rx*rx+ry*ry)/2)).toLocaleString();
+  }
 }
 
 function resetView() {
@@ -236,10 +274,11 @@ function paintCell(bx, by) {
   const k = bx+','+by;
   if(k === lastKey) return false;
   lastKey = k;
+  const {blocks: activeBlocks, erased: activeErased} = activeMaps();
   const mirrors = getSymmetryMirrors(bx, by);
   const changed = mirrors.some(mk => {
-    if(paintMode === 'add') return customBlocks.get(mk) !== selColor || customErased.has(mk);
-    return customBlocks.has(mk) || !customErased.has(mk);
+    if(paintMode === 'add') return activeBlocks.get(mk) !== selColor || activeErased.has(mk);
+    return activeBlocks.has(mk) || !activeErased.has(mk);
   });
   if(!changed) return false;
 
@@ -250,13 +289,16 @@ function paintCell(bx, by) {
 
   mirrors.forEach(mk => {
     if(paintMode === 'add') {
-      customBlocks.set(mk, selColor);
-      customErased.delete(mk);
+      activeBlocks.set(mk, selColor);
+      activeErased.delete(mk);
+      pop2dAnims.set(mk, performance.now());
     } else {
-      customBlocks.delete(mk);
-      customErased.add(mk);
+      activeBlocks.delete(mk);
+      activeErased.add(mk);
     }
   });
+  if(paintMode === 'add') ensure2dAnimLoop();
+  if(viewMode === '3d') dirty3d = true;
   return changed;
 }
 

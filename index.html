@@ -39,11 +39,24 @@
 
 
   <div class="ss">
+    <div class="st-row"><span class="st-icon">🧊</span><div class="st">Mode</div></div>
+    <div class="seg" id="mode-seg">
+      <button class="active" data-mode="2d">2D</button>
+      <button data-mode="3d">3D</button>
+    </div>
+  </div>
+
+  <div class="ss">
     <div class="st-row"><span class="st-icon">⬟</span><div class="st">Shape</div></div>
     <div class="seg" id="shape-seg">
       <button class="active" data-shape="circle">Circle</button>
       <button data-shape="ellipse">Ellipse</button>
       <button data-shape="filled">Filled</button>
+    </div>
+    <div class="seg" id="shape-seg-3d" style="display:none">
+      <button class="active" data-shape3d="sphere">Sphere</button>
+      <button data-shape3d="dome">Dome</button>
+      <button data-shape3d="cylinder">Cylinder</button>
     </div>
     <div class="ctrl">
       <div class="ch"><span class="cl">Radius X</span><span class="cn" id="rv">15</span></div>
@@ -52,6 +65,14 @@
     <div class="ctrl" id="ry-ctrl" style="display:none">
       <div class="ch"><span class="cl">Radius Y</span><span class="cn" id="hrv">10</span></div>
       <input type="range" id="hradius" min="2" max="100" value="10">
+    </div>
+    <div class="ctrl" id="height-ctrl" style="display:none">
+      <div class="ch"><span class="cl">Height</span><span class="cn" id="chv">20</span></div>
+      <input type="range" id="cylHeight" min="1" max="150" value="20">
+    </div>
+    <div class="ctrl" id="layer-ctrl" style="display:none">
+      <div class="ch"><span class="cl">Layer (Y)</span><span class="cn" id="lyv">0</span></div>
+      <input type="range" id="layerSlider" min="0" max="0" value="0">
     </div>
   </div>
 
@@ -87,7 +108,7 @@
     <div class="chklist">
       <label class="chk"><input type="checkbox" id="symX"><span>Mirror X (left ↔ right)</span></label>
       <label class="chk"><input type="checkbox" id="symY"><span>Mirror Y (top ↕ bottom)</span></label>
-      <label class="chk"><input type="checkbox" id="sym4" checked><span>4-way (X + Y)</span></label>
+      <label class="chk"><input type="checkbox" id="sym4"><span>4-way (X + Y)</span></label>
     </div>
   </div>
 
@@ -133,6 +154,17 @@
 
 <div class="cw" id="cw">
   <canvas id="mc"></canvas>
+  <canvas id="mc3d" style="display:none"></canvas>
+  <div class="viewport-vignette" id="viewportVignette"></div>
+  <div class="ctrl-hints" id="ctrlHints3d">
+    <span><b>WASD</b> move</span>
+    <span><b>Mouse</b> look</span>
+    <span><b>Space/Q</b> up/down</span>
+    <span><b>Shift</b> sprint</span>
+    <span><b>LMB</b> lock / paint</span>
+    <span><b>Esc</b> unlock</span>
+  </div>
+  <div class="crosshair-3d" id="crosshair3d"></div>
   <div class="cb" id="cb">0, 0</div>
   <div class="dl-bar">
     <span class="dl-bar-label">Export</span>
@@ -159,6 +191,8 @@
 <script src="js/geometry.js"></script>
 <script src="js/canvas-render.js"></script>
 <script src="js/canvas-events.js"></script>
+<script src="js/three.min.js"></script>
+<script src="js/viewer-3d.js"></script>
 <script src="js/export-png.js"></script>
 <script src="js/export-schematic.js"></script>
 <script src="js/init.js"></script>

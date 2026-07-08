@@ -14,12 +14,44 @@ function syncZ() {
 function getR() { return parseInt(document.getElementById('radius').value); }
 function getHR() { return shape==='ellipse' ? parseInt(document.getElementById('hradius').value) : getR(); }
 
+function getLayerRange(type, R, height) {
+  if(type === 'cylinder') return [0, height-1];
+  if(type === 'dome') return [0, R];
+  return [-R, R];
+}
+
+function volumeInside(type, R, height, x, y, z) {
+  const Rp = R+.5;
+  if(type === 'cylinder') return y>=0 && y<height && (x*x+z*z)/(Rp*Rp)<=1;
+  if(type === 'dome' && y<0) return false;
+  return (x*x+y*y+z*z)/(Rp*Rp)<=1;
+}
+
+function genLayerCrossSection(type, R, height, y) {
+  const out = [];
+  for(let x=-R; x<=R; x++) {
+    for(let z=-R; z<=R; z++) {
+      if(volumeInside(type, R, height, x, y, z)) out.push([x,z]);
+    }
+  }
+  return out;
+}
+
+function genVolume(type, R, height) {
+  const [y0,y1] = getLayerRange(type, R, height);
+  const out = [];
+  for(let y=y0; y<=y1; y++) {
+    genLayerCrossSection(type, R, height, y).forEach(([x,z]) => out.push([x,y,z]));
+  }
+  return out;
+}
+
 function genCircle(rx, ry, filled) {
   const out = [];
   for(let y=-ry; y<=ry; y++) {
     for(let x=-rx; x<=rx; x++) {
       if(filled) {
-        if((x+.5)*(x+.5)/(rx*rx)+(y+.5)*(y+.5)/(ry*ry)<=1) out.push([x,y]);
+        if(x*x/((rx+.5)*(rx+.5))+y*y/((ry+.5)*(ry+.5))<=1) out.push([x,y]);
       } else {
         const c = [
           (x-.5)/rx,(x+.5)/rx

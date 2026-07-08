@@ -37,9 +37,10 @@ canvas.addEventListener('touchmove', e => { if(e.touches.length===1&&isPainting)
 canvas.addEventListener('touchend', () => { endStroke(); });
 
 document.addEventListener('keydown', e => {
-  if((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey){e.preventDefault();document.getElementById('undoBtn').click()}
-  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.key==='z'&&e.shiftKey))){e.preventDefault();document.getElementById('redoBtn').click()}
-  if(e.code==='Space'&&!spaceDown){spaceDown=true;cw.style.cursor='grab'}
+  const el = document.activeElement;
+  const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+  if(typing || viewMode !== '2d' || e.ctrlKey || e.altKey || e.metaKey) return;
+  if(e.code==='Space'&&!spaceDown){spaceDown=true;cw.style.cursor='grab'; e.preventDefault();}
 });
 document.addEventListener('keyup', e => { if(e.code==='Space'){spaceDown=false;cw.style.cursor=tool==='pan'?'grab':'crosshair';} });
 

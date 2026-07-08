@@ -120,25 +120,33 @@ document.getElementById('dlSchemBtn').addEventListener('click', async () => {
   const filled_ = shape === 'filled';
   const quarter = document.getElementById('quarterMode').checked;
 
-  const genBlocks_ = genCircle(rx, ry, filled_);
-  const allKeys = new Set();
-  genBlocks_.forEach(([x,y]) => { const k=x+','+y; if(!customErased.has(k)) allKeys.add(k); });
-  customBlocks.forEach((_,k) => allKeys.add(k));
-
   const positions = [];
-  allKeys.forEach(k => {
-    const [bx,by] = k.split(',').map(Number);
-    if(quarter && (bx<0||by<0)) return;
-    positions.push({x:bx, z:by, blockIdx: customBlocks.has(k)?customBlocks.get(k):circleBlock});
-  });
+  if(viewMode === '3d') {
+    computeFullVolumeBlocks().forEach((blockIdx, k) => {
+      const [bx,by,bz] = k.split(',').map(Number);
+      if(quarter && (bx<0||bz<0)) return;
+      positions.push({x:bx, y:by, z:bz, blockIdx});
+    });
+  } else {
+    const genBlocks_ = genCircle(rx, ry, filled_);
+    const allKeys = new Set();
+    genBlocks_.forEach(([x,y]) => { const k=x+','+y; if(!customErased.has(k)) allKeys.add(k); });
+    customBlocks.forEach((_,k) => allKeys.add(k));
+    allKeys.forEach(k => {
+      const [bx,by] = k.split(',').map(Number);
+      if(quarter && (bx<0||by<0)) return;
+      positions.push({x:bx, y:0, z:by, blockIdx: customBlocks.has(k)?customBlocks.get(k):circleBlock});
+    });
+  }
   if(!positions.length){ alert('No blocks to export!'); return; }
 
-  let minX=Infinity,minZ=Infinity,maxX=-Infinity,maxZ=-Infinity;
-  positions.forEach(({x,z})=>{
+  let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;
+  positions.forEach(({x,y,z})=>{
     if(x<minX)minX=x; if(x>maxX)maxX=x;
+    if(y<minY)minY=y; if(y>maxY)maxY=y;
     if(z<minZ)minZ=z; if(z>maxZ)maxZ=z;
   });
-  const W = maxX-minX+1, H = 1, L = maxZ-minZ+1;
+  const W = maxX-minX+1, H = maxY-minY+1, L = maxZ-minZ+1;
 
   const palette = new Map();
   palette.set('minecraft:air', 0);
@@ -148,9 +156,9 @@ document.getElementById('dlSchemBtn').addEventListener('click', async () => {
   });
 
   const paletteIds = new Uint32Array(W*H*L);
-  positions.forEach(({x,z,blockIdx}) => {
-    const lx=x-minX, lz=z-minZ;
-    const idx = 0*W*L + lz*W + lx;
+  positions.forEach(({x,y,z,blockIdx}) => {
+    const lx=x-minX, ly=y-minY, lz=z-minZ;
+    const idx = ly*W*L + lz*W + lx;
     paletteIds[idx] = palette.get(BLOCK_STATES[blockIdx] || 'minecraft:stone');
   });
 
@@ -184,7 +192,7 @@ document.getElementById('dlSchemBtn').addEventListener('click', async () => {
   tagShort('Width', W);
   tagShort('Height', H);
   tagShort('Length', L);
-  tagIntArray('Offset', [minX, 64, minZ]);
+  tagIntArray('Offset', [minX, viewMode==='3d' ? minY : 64, minZ]);
 
   beginCompound('Palette');
   palette.forEach((id, state) => tagInt(state, id));
@@ -208,7 +216,7 @@ document.getElementById('dlSchemBtn').addEventListener('click', async () => {
 
   const blob = await makeDownloadBlob(out);
   const url = URL.createObjectURL(blob);
-  const shape_=shape, r_=rx+(shape==='ellipse'?'x'+ry:'');
+  const shape_=viewMode==='3d'?shape3d:shape, r_=viewMode==='3d'?rx+(shape3d==='cylinder'?'xh'+cylHeight:''):rx+(shape==='ellipse'?'x'+ry:'');
   const a=document.createElement('a');
   a.download=`mcircle_${shape_}_r${r_}.schem`;
   a.href=url; a.click();

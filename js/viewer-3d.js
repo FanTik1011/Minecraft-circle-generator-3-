@@ -409,7 +409,9 @@ function resize3d() {
 function frameCamera3d() {
   const R = getR();
   const [y0,y1] = getLayerRange(shape3d, R, cylHeight);
-  animateCameraTo3d({x:0, y:(y0+y1)/2, z:0}, Math.max(8, R*2.6), 0.7, 1.1);
+  const compactViewport = cw.clientHeight < 620;
+  const cameraScale = compactViewport ? 3.45 : 2.85;
+  animateCameraTo3d({x:0, y:(y0+y1)/2, z:0}, Math.max(8, R*cameraScale), 0.7, compactViewport ? 1.2 : 1.1);
 
   const axesSize = Math.max(6, R*2.2);
   axesHelper3d.scale.set(axesSize, axesSize, axesSize);

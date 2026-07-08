@@ -400,8 +400,10 @@ function updateCamera3d() {
 
 function resize3d() {
   if(!renderer3d) return;
-  const W = cw.clientWidth, H = cw.clientHeight;
-  renderer3d.setSize(W, H, false);
+  const rect = cw.getBoundingClientRect();
+  const W = Math.max(1, Math.round(rect.width));
+  const H = Math.max(1, Math.round(rect.height));
+  renderer3d.setSize(W, H, true);
   camera3d.aspect = W/H;
   camera3d.updateProjectionMatrix();
 }
@@ -410,8 +412,8 @@ function frameCamera3d() {
   const R = getR();
   const [y0,y1] = getLayerRange(shape3d, R, cylHeight);
   const compactViewport = cw.clientHeight < 620;
-  const cameraScale = compactViewport ? 3.45 : 2.85;
-  animateCameraTo3d({x:0, y:(y0+y1)/2, z:0}, Math.max(8, R*cameraScale), 0.7, compactViewport ? 1.2 : 1.1);
+  const cameraScale = compactViewport ? 3.9 : 3.05;
+  animateCameraTo3d({x:0, y:(y0+y1)/2, z:0}, Math.max(8, R*cameraScale), 0.55, compactViewport ? 1.18 : 1.1);
 
   const axesSize = Math.max(6, R*2.2);
   axesHelper3d.scale.set(axesSize, axesSize, axesSize);
@@ -558,6 +560,11 @@ function show3D() {
   resize3d();
   frameCamera3d();
   dirty3d = true;
+  requestAnimationFrame(() => {
+    resize3d();
+    frameCamera3d();
+    dirty3d = true;
+  });
   if(!rafId3d) rafId3d = requestAnimationFrame(renderLoop3d);
 }
 

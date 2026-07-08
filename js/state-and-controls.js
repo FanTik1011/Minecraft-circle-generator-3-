@@ -143,9 +143,9 @@ document.querySelectorAll('#mode-seg button').forEach(b => {
     document.getElementById('mc3d').style.display = viewMode === '3d' ? '' : 'none';
     document.getElementById('viewportVignette').classList.toggle('active', viewMode === '3d');
     document.getElementById('ctrlHints3d').classList.toggle('active', viewMode === '3d');
-    if(viewMode === '3d') { updateLayerSlider(); show3D(); } else { hide3D(); }
+    if(viewMode === '3d') { updateLayerSlider(); show3D(); } else { hide3D(); resetView(); }
     dirty3d = true;
-    resetView(); draw();
+    draw();
   };
 });
 document.querySelectorAll('#shape-seg-3d button').forEach(b => {

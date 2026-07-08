@@ -284,6 +284,7 @@ body.light-bg .side-toggle{background:rgba(245,245,245,.94);box-shadow:0 0 16px 
 .viewport-vignette.active{opacity:1}
 body.light-bg .viewport-vignette{background:radial-gradient(ellipse at 50% 45%, transparent 45%, rgba(20,20,30,.22) 100%)}
 canvas{position:absolute;top:0;left:0;image-rendering:pixelated;touch-action:none}
+#mc,#mc3d{width:100%;height:100%;display:block}
 .ctrl-hints{
   position:absolute;top:9px;right:9px;z-index:10;
   display:none;flex-direction:column;gap:4px;

@@ -65,6 +65,33 @@ function computeFullVolumeBlocks() {
   return map;
 }
 
+function countFullVolumeBlocks() {
+  const R = getR();
+  const [y0,y1] = getLayerRange(shape3d, R, cylHeight);
+  const ys = new Set(layerBlocks.keys());
+  for(let y=y0; y<=y1; y++) ys.add(y);
+
+  let count = 0;
+  ys.forEach(y => {
+    const inRange = y>=y0 && y<=y1;
+    const blocks = layerBlocks.get(y) || new Map();
+    const erased = layerErased.get(y) || new Set();
+
+    if(inRange) {
+      genLayerCrossSection(shape3d, R, cylHeight, y).forEach(([x,z]) => {
+        if(!erased.has(x+','+z)) count++;
+      });
+    }
+
+    blocks.forEach((_, k2) => {
+      const [x,z] = k2.split(',').map(Number);
+      const insideBase = inRange && volumeInside(shape3d, R, cylHeight, x, y, z);
+      if(!insideBase || erased.has(k2)) count++;
+    });
+  });
+  return count;
+}
+
 function cloneLayerMaps() {
   const blocks = new Map();
   layerBlocks.forEach((m,y) => blocks.set(y, new Map(m)));
@@ -126,7 +153,7 @@ function updateLayerSlider() {
   currentLayer = Math.min(y1, Math.max(y0, currentLayer));
   sl.value = currentLayer;
   document.getElementById('lyv').textContent = currentLayer;
-  volumeBlockCount = genVolume(shape3d, getR(), cylHeight).length;
+  volumeBlockCount = countFullVolumeBlocks();
 }
 
 document.querySelectorAll('#mode-seg button').forEach(b => {
@@ -165,6 +192,7 @@ document.getElementById('cylHeight').addEventListener('input', e => {
 document.getElementById('layerSlider').addEventListener('input', e => {
   currentLayer = parseInt(e.target.value);
   document.getElementById('lyv').textContent = currentLayer;
+  dirty3d = true;
   draw();
 });
 ['radius','hradius'].forEach(id => {

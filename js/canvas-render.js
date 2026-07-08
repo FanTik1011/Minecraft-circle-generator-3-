@@ -214,6 +214,7 @@ function draw() {
     : allKeys.size;
 
   if(viewMode === '3d') {
+    volumeBlockCount = countFullVolumeBlocks();
     document.getElementById('hb').textContent = volumeBlockCount.toLocaleString();
     document.getElementById('hd').textContent = (rx*2+1)+(shape3d==='cylinder'?' × h'+cylHeight:'');
     document.getElementById('ha').textContent = Math.round(

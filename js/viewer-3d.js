@@ -125,7 +125,7 @@ function updateFlyCamera3d(dt) {
 
 let warnEl3d = null;
 
-let axesHelper3d = null, gridHelper3d = null, groundPlane3d = null, shadowBlob3d = null;
+let axesHelper3d = null, gridHelper3d = null, groundPlane3d = null, shadowBlob3d = null, layerGuide3d = null;
 let gridY3d = 0;
 const raycaster3d = new THREE.Raycaster();
 const pointerNDC3d = new THREE.Vector2();
@@ -165,19 +165,60 @@ function pickVoxel3d(clientX, clientY) {
   return {ground: false, x, y, z, nx: Math.round(n.x), ny: Math.round(n.y), nz: Math.round(n.z)};
 }
 
+function makeCornerMarkerGeometry3d(size, arm) {
+  const half = size / 2;
+  const points = [];
+  [-1, 1].forEach(x => {
+    [-1, 1].forEach(y => {
+      [-1, 1].forEach(z => {
+        const px = x * half, py = y * half, pz = z * half;
+        points.push(new THREE.Vector3(px, py, pz), new THREE.Vector3(px - x * arm, py, pz));
+        points.push(new THREE.Vector3(px, py, pz), new THREE.Vector3(px, py - y * arm, pz));
+        points.push(new THREE.Vector3(px, py, pz), new THREE.Vector3(px, py, pz - z * arm));
+      });
+    });
+  });
+  return new THREE.BufferGeometry().setFromPoints(points);
+}
+
 function ensureHoverBox3d() {
   if(hoverBoxMesh3d) return hoverBoxMesh3d;
-  const geo = new THREE.BoxGeometry(1.04, 1.04, 1.04);
-  const mat = new THREE.MeshBasicMaterial({color: 0x76d97e, transparent: true, opacity: 0.35, depthTest: false});
-  hoverBoxMesh3d = new THREE.Mesh(geo, mat);
-  hoverBoxMesh3d.renderOrder = 999;
-  hoverBoxMesh3d.visible = false;
-  const edges = new THREE.LineSegments(
-    new THREE.EdgesGeometry(geo),
-    new THREE.LineBasicMaterial({color: 0xffffff, depthTest: false})
+  const group = new THREE.Group();
+
+  const fill = new THREE.Mesh(
+    new THREE.BoxGeometry(1.01, 1.01, 1.01),
+    new THREE.MeshBasicMaterial({
+      color: 0x5cff8b,
+      transparent: true,
+      opacity: 0.12,
+      depthTest: false,
+      depthWrite: false
+    })
   );
-  edges.renderOrder = 1000;
-  hoverBoxMesh3d.add(edges);
+  fill.renderOrder = 996;
+
+  const glow = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(1.10, 1.10, 1.10)),
+    new THREE.LineBasicMaterial({color: 0x5cff8b, transparent: true, opacity: 0.28, depthTest: false})
+  );
+  glow.renderOrder = 997;
+
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(new THREE.BoxGeometry(1.035, 1.035, 1.035)),
+    new THREE.LineBasicMaterial({color: 0x5cff8b, transparent: true, opacity: 0.9, depthTest: false})
+  );
+  edges.renderOrder = 998;
+
+  const corners = new THREE.LineSegments(
+    makeCornerMarkerGeometry3d(1.16, 0.28),
+    new THREE.LineBasicMaterial({color: 0xf2fff5, transparent: true, opacity: 0.8, depthTest: false})
+  );
+  corners.renderOrder = 999;
+
+  group.add(fill, glow, edges, corners);
+  group.userData = {fill, glow, edges, corners};
+  group.visible = false;
+  hoverBoxMesh3d = group;
   scene3d.add(hoverBoxMesh3d);
   return hoverBoxMesh3d;
 }
@@ -193,10 +234,19 @@ function updateHoverBox3d() {
   let tx = hit.x, ty = hit.y, tz = hit.z;
   if(tool === 'paint' && !hit.ground) { tx += hit.nx; ty += hit.ny; tz += hit.nz; }
   box.position.set(tx, ty, tz);
-  box.material.color.set(tool === 'erase' ? 0xe05a5a : 0x76d97e);
+  const erase = tool === 'erase';
+  const mainColor = erase ? 0xff4f68 : 0x5cff8b;
+  const cornerColor = erase ? 0xffd6dc : 0xf2fff5;
   const pulse = Math.sin(performance.now()/280) * 0.5 + 0.5;
-  box.material.opacity = 0.25 + pulse*0.25;
-  const s = 1.02 + pulse*0.06;
+  box.userData.fill.material.color.setHex(mainColor);
+  box.userData.glow.material.color.setHex(mainColor);
+  box.userData.edges.material.color.setHex(mainColor);
+  box.userData.corners.material.color.setHex(cornerColor);
+  box.userData.fill.material.opacity = (erase ? 0.08 : 0.1) + pulse*0.06;
+  box.userData.glow.material.opacity = 0.18 + pulse*0.18;
+  box.userData.edges.material.opacity = 0.74 + pulse*0.18;
+  box.userData.corners.material.opacity = 0.72 + pulse*0.18;
+  const s = 1.01 + pulse*0.035;
   box.scale.set(s, s, s);
   box.visible = true;
 }
@@ -274,6 +324,13 @@ function initScene3d() {
   shadowBlob3d.rotation.x = -Math.PI/2;
   shadowBlob3d.renderOrder = -1;
   scene3d.add(shadowBlob3d);
+
+  layerGuide3d = new THREE.LineSegments(
+    new THREE.BufferGeometry(),
+    new THREE.LineBasicMaterial({color: 0x76d97e, transparent: true, opacity: 0.92, depthTest: false})
+  );
+  layerGuide3d.renderOrder = 880;
+  scene3d.add(layerGuide3d);
 
   mc3d.addEventListener('mousemove', () => { hoverActive3d = true; });
   mc3d.addEventListener('mouseleave', () => { hoverActive3d = false; });
@@ -493,6 +550,32 @@ function ensureWarn3d() {
   return warnEl3d;
 }
 
+function updateLayerGuide3d(volume) {
+  if(!layerGuide3d) return;
+  const layerCells = new Set();
+  volume.forEach((_, key) => {
+    const [x,y,z] = key.split(',').map(Number);
+    if(y === currentLayer) layerCells.add(x+','+z);
+  });
+
+  const pts = [];
+  const y = currentLayer + 0.56;
+  layerCells.forEach(k => {
+    const [x,z] = k.split(',').map(Number);
+    const left = x - 0.52, right = x + 0.52;
+    const front = z - 0.52, back = z + 0.52;
+    if(!layerCells.has((x-1)+','+z)) pts.push(left,y,front, left,y,back);
+    if(!layerCells.has((x+1)+','+z)) pts.push(right,y,front, right,y,back);
+    if(!layerCells.has(x+','+(z-1))) pts.push(left,y,front, right,y,front);
+    if(!layerCells.has(x+','+(z+1))) pts.push(left,y,back, right,y,back);
+  });
+
+  layerGuide3d.geometry.dispose();
+  layerGuide3d.geometry = new THREE.BufferGeometry();
+  layerGuide3d.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+  layerGuide3d.visible = pts.length > 0;
+}
+
 function rebuild3d() {
   const volume = computeFullVolumeBlocks();
 
@@ -538,6 +621,7 @@ function rebuild3d() {
     meshes3d.push(mesh);
   });
 
+  updateLayerGuide3d(volume);
   ensureWarn3d().style.display = visibleCount > 150000 ? '' : 'none';
 }
 

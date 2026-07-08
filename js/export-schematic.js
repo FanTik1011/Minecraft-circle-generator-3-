@@ -116,6 +116,11 @@ async function makeDownloadBlob(bytes) {
 }
 
 document.getElementById('dlSchemBtn').addEventListener('click', async () => {
+  if(viewMode === '3d' && typeof rebuild3d === 'function' && dirty3d) {
+    rebuild3d();
+    dirty3d = false;
+  }
+
   const rx = getR(), ry = getHR();
   const filled_ = shape === 'filled';
   const quarter = document.getElementById('quarterMode').checked;
@@ -219,6 +224,9 @@ document.getElementById('dlSchemBtn').addEventListener('click', async () => {
   const shape_=viewMode==='3d'?shape3d:shape, r_=viewMode==='3d'?rx+(shape3d==='cylinder'?'xh'+cylHeight:''):rx+(shape==='ellipse'?'x'+ry:'');
   const a=document.createElement('a');
   a.download=`mcircle_${shape_}_r${r_}.schem`;
-  a.href=url; a.click();
-  URL.revokeObjectURL(url);
+  a.href=url;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 });

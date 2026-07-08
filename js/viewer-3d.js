@@ -82,20 +82,36 @@ function isTypingTarget3d() {
   return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
 }
 
-window.addEventListener('keydown', e => {
+function focusMinecraftCanvas3d() {
+  if(!mc3d) return;
+  try { mc3d.focus({preventScroll: true}); }
+  catch (_) { try { mc3d.focus(); } catch (_) {} }
+}
+
+function handleKeyDown3d(e) {
   if(viewMode !== '3d' || isTypingTarget3d()) return;
   if(e.ctrlKey || e.altKey || e.metaKey) return;
+  if(e.code === 'Backspace') {
+    keysDown3d.clear();
+    if(document.pointerLockElement === mc3d && document.exitPointerLock) document.exitPointerLock();
+    e.preventDefault();
+    return;
+  }
   if(['KeyW','KeyA','KeyS','KeyD','KeyQ','Space','ShiftLeft','ShiftRight'].includes(e.code)) {
     keysDown3d.add(e.code);
     e.preventDefault();
   }
-});
-window.addEventListener('keyup', e => {
+}
+
+function handleKeyUp3d(e) {
   keysDown3d.delete(e.code);
   if(e.code === 'ControlLeft' || e.code === 'ControlRight' || e.code === 'AltLeft' || e.code === 'AltRight' || e.code === 'MetaLeft' || e.code === 'MetaRight') {
     keysDown3d.clear();
   }
-});
+}
+
+window.addEventListener('keydown', handleKeyDown3d, true);
+window.addEventListener('keyup', handleKeyUp3d, true);
 window.addEventListener('blur', () => keysDown3d.clear());
 
 function updateFlyCamera3d(dt) {
@@ -286,7 +302,8 @@ function processPaintDrag3d() {
 }
 
 function initScene3d() {
-  renderer3d = new THREE.WebGLRenderer({canvas: mc3d, antialias: true});
+  mc3d.tabIndex = 0;
+  renderer3d = new THREE.WebGLRenderer({canvas: mc3d, antialias: true, preserveDrawingBuffer: true});
   renderer3d.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   scene3d = new THREE.Scene();
   updateSceneBackground3d();
@@ -336,6 +353,7 @@ function initScene3d() {
   mc3d.addEventListener('mouseleave', () => { hoverActive3d = false; });
 
   mc3d.addEventListener('mousedown', e => {
+    focusMinecraftCanvas3d();
     e.preventDefault();
     if(document.pointerLockElement !== mc3d) {
       requestPointerLock3d();
@@ -397,9 +415,12 @@ function initScene3d() {
     mc3d.classList.toggle('mouse-locked', locked);
     hoverActive3d = locked || hoverActive3d;
     if(locked) {
+      focusMinecraftCanvas3d();
       const rect = mc3d.getBoundingClientRect();
       pointerX3d = rect.left + rect.width/2;
       pointerY3d = rect.top + rect.height/2;
+    } else {
+      keysDown3d.clear();
     }
   });
 
@@ -641,6 +662,7 @@ function renderLoop3d() {
 
 function show3D() {
   if(!renderer3d) initScene3d();
+  focusMinecraftCanvas3d();
   resize3d();
   frameCamera3d();
   dirty3d = true;

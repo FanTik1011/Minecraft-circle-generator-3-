@@ -1,4 +1,21 @@
 document.getElementById('dlBtn').addEventListener('click', () => {
+  if(viewMode === '3d') {
+    if(typeof rebuild3d === 'function' && dirty3d) {
+      rebuild3d();
+      dirty3d = false;
+    }
+    if(renderer3d && scene3d && camera3d) renderer3d.render(scene3d, camera3d);
+    const shape_ = shape3d;
+    const r_ = getR() + (shape3d === 'cylinder' ? 'xh' + cylHeight : '');
+    const a = document.createElement('a');
+    a.download = `mcircle_${shape_}_r${r_}_3d.png`;
+    a.href = mc3d.toDataURL('image/png');
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return;
+  }
+
   const rx = getR(), ry = getHR();
   const quarter = document.getElementById('quarterMode').checked;
   const showGrid = document.getElementById('showGrid').checked;
@@ -87,5 +104,7 @@ document.getElementById('dlBtn').addEventListener('click', () => {
   const a = document.createElement('a');
   a.download = `mcircle_${shape_}_r${r_}.png`;
   a.href = oc.toDataURL('image/png');
+  document.body.appendChild(a);
   a.click();
+  a.remove();
 });
